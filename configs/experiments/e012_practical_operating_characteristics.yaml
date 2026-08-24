@@ -1,0 +1,46 @@
+version: 1
+experiment: E012
+classification: post_confirmatory_descriptive
+inputs:
+  acquisition_table:
+    path: results/tables/e006b_confirmation_sparse_acquisition.csv.gz
+    sha256: e79ba3072ee7283d901ee17874dfd8e8ffa8586697b3a1e6b7893c310f3d3939
+  prediction_table:
+    path: data/processed/e006b_confirmation_predictions.csv.gz
+    sha256: e7013a4409a0c32d5ddd52561e7d0d95a6bc896f5c81af660e4610818e3da299
+analysis:
+  primary_budget: 6
+  primary_methods:
+    - learned_active
+    - zero_shot_active
+    - learned_equal
+  metrics:
+    - profile_mae
+    - barrier_abs_error
+  descriptive_thresholds_kcal_mol:
+    - 0.5
+    - 1.0
+  exact_tolerance_kcal_mol: 1.0e-12
+  cross_budget:
+    proposed_method: learned_active
+    proposed_budget: 4
+    comparator_method: learned_equal
+    comparator_budget: 6
+  bootstrap_repeats: 5000
+  bootstrap_seed_salt: E012-practical-operating-characteristics
+expected:
+  acquisition_rows: 135000
+  profile_count: 1000
+  budgets:
+    - 0
+    - 1
+    - 2
+    - 4
+    - 6
+outputs:
+  operating_characteristics: results/tables/confirmation_operating_characteristics.csv
+  empirical_cdf: results/tables/confirmation_error_ecdf.csv
+  cross_budget: results/tables/confirmation_cross_budget_comparison.csv
+  pairwise_outcomes: results/tables/confirmation_pairwise_outcomes.csv
+  query_accounting: results/tables/confirmation_query_accounting.csv
+  audit: results/source_audit/e012_practical_operating_characteristics.json

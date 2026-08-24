@@ -1,0 +1,15 @@
+data/
+runs/
+paper/
+results/
+tmp/
+*.h5
+*.hdf5
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.npz
+*.npy
+**/*cache*/
+**/models--facebook--UMA/**

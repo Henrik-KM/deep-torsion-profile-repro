@@ -1,0 +1,74 @@
+version: 4
+experiment: E014
+classification: post_confirmatory_descriptive
+inputs:
+  confirmation_acquisition:
+    path: results/tables/e006b_confirmation_sparse_acquisition.csv.gz
+    sha256: e79ba3072ee7283d901ee17874dfd8e8ffa8586697b3a1e6b7893c310f3d3939
+  confirmation_predictions:
+    path: data/processed/e006b_confirmation_predictions.csv.gz
+    sha256: e7013a4409a0c32d5ddd52561e7d0d95a6bc896f5c81af660e4610818e3da299
+  development_caches:
+    - path: data/processed/e002b_profile_cache
+      file_glob: "*.npz"
+      expected_files: 500
+      inventory_sha256: f80b587f52ad6a977a9a3a342e034867d2e465afe8569b5c7076380401937866
+    - path: data/processed/e004b_fresh_profile_cache
+      file_glob: "*.npz"
+      expected_files: 500
+      inventory_sha256: c4d246639b8005e6c3bad13fea2563e0e1ca3c9f79c15855d8c5471ec3901210
+  confirmation_cache:
+    path: data/processed/e006b_confirmation_profile_cache
+    file_glob: "*.npz"
+    expected_files: 1200
+    inventory_sha256: 185d0b9ca44b0c68653a0f7b61a888e98a8322245afc132a3188b6de981aae13
+analysis:
+  primary_budget: 6
+  proposed_method: learned_active
+  primary_comparators:
+    - zero_shot_active
+    - learned_equal
+  metrics:
+    - profile_mae
+    - barrier_abs_error
+  tie_tolerance_kcal_mol: 1.0e-12
+  gp_noise_variance: 0.0025
+  metric_replay_tolerance_kcal_mol: 1.0e-5
+  bootstrap_repeats: 5000
+  bootstrap_seed_salt: E014-applicability-failure-atlas
+  fingerprint:
+    radius: 2
+    bits: 2048
+  torsion_descriptor:
+    feature_schema: torsion-local-uma-v1
+    chemistry_slice: [0, 16]
+    torsion_element_slice: [12, 16]
+    central_positions: [1, 2]
+  target_blind_quantile_bins: 4
+  minimum_reportable_group: 50
+  performance_axes:
+    - whole_similarity_quartile
+    - torsion_descriptor_distance_quartile
+    - heavy_atom_quartile
+    - central_bond_class
+    - formal_charge_class
+  representative_roles:
+    - median_learned_profile_mae
+    - p95_learned_profile_mae
+    - largest_profile_mae_regression_vs_zero_shot
+    - largest_barrier_regression_vs_learned_equal
+expected:
+  development_profiles: 1000
+  confirmation_profiles: 1000
+  acquisition_rows: 135000
+  prediction_rows: 45994
+  candidate_count_minimum: 12
+  candidate_count_maximum: 24
+outputs:
+  profile_characteristics: results/tables/confirmation_profile_characteristics.csv
+  chemical_coverage: results/tables/chemical_coverage_summary.csv
+  applicability_effects: results/tables/confirmation_applicability_effects.csv
+  failure_summary: results/tables/confirmation_failure_summary.csv
+  representative_profiles: results/tables/confirmation_representative_profiles.csv
+  representative_curves: results/tables/confirmation_representative_curves.csv
+  audit: results/source_audit/e014_applicability_failure_atlas.json
