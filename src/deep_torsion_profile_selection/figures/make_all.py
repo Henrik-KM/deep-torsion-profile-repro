@@ -1,3 +1,5 @@
+"""Generate synthesis figures from audited result tables."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -38,6 +40,7 @@ def _style() -> None:
 
 
 def _promote_if_changed(temporary: Path, destination: Path) -> None:
+    """Replace a generated asset only when its bytes changed."""
     if destination.exists() and temporary.read_bytes() == destination.read_bytes():
         temporary.unlink()
         return
@@ -66,6 +69,7 @@ def _save(fig: plt.Figure, stem: str) -> None:
 
 
 def _save_toc(fig: plt.Figure) -> None:
+    """Save the Wiley Table of Contents graphic at its required dimensions."""
     FIGURES.mkdir(parents=True, exist_ok=True)
     PAPER.mkdir(parents=True, exist_ok=True)
     pdf_path = FIGURES / "toc_graphic.pdf"
@@ -84,17 +88,17 @@ def _save_toc(fig: plt.Figure) -> None:
             "ModDate": None,
         },
     )
-    fig.savefig(temporary_png, dpi=600)
+    fig.savefig(temporary_png, dpi=300)
     fig.savefig(
         temporary_tif,
-        dpi=600,
+        dpi=300,
         pil_kwargs={"compression": "tiff_lzw"},
     )
     plt.close(fig)
     with Image.open(temporary_tif) as source:
         rgb = source.convert("RGB")
-    rgb.save(temporary_tif, compression="tiff_lzw", dpi=(600, 600))
-    rgb.save(temporary_paper_tif, compression="tiff_lzw", dpi=(600, 600))
+    rgb.save(temporary_tif, compression="tiff_lzw", dpi=(300, 300))
+    rgb.save(temporary_paper_tif, compression="tiff_lzw", dpi=(300, 300))
     _promote_if_changed(temporary_pdf, pdf_path)
     _promote_if_changed(temporary_png, png_path)
     _promote_if_changed(temporary_tif, tif_path)
@@ -133,12 +137,15 @@ def _box(
 
 
 def toc_graphic() -> None:
-    fig = plt.figure(figsize=(3.25, 1.75))
+    """Draw an original, data-free table-of-contents graphic."""
+    fig = plt.figure(figsize=(110 / 25.4, 20 / 25.4))
     axis = fig.add_axes([0.015, 0.06, 0.97, 0.90])
     axis.set_xlim(0, 1)
     axis.set_ylim(0, 1)
     axis.axis("off")
 
+    # Several source profiles summarize cross-molecule transfer without using
+    # any scientific observations from the study.
     mini_x = np.linspace(0.04, 0.27, 80)
     phase = np.linspace(-np.pi, np.pi, mini_x.size)
     for offset, shift in zip((0.70, 0.50, 0.30), (0.2, 1.0, 1.8), strict=True):
@@ -151,7 +158,7 @@ def toc_graphic() -> None:
         ha="center",
         va="center",
         color=BLUE,
-        fontsize=7.2,
+        fontsize=10.0,
         fontweight="bold",
     )
 
@@ -166,6 +173,8 @@ def toc_graphic() -> None:
         )
     )
 
+    # The right-hand profile integrates a transferred prior and adaptive target
+    # reveals. Curves are illustrative and deliberately contain no study data.
     x = np.linspace(0.42, 0.97, 160)
     phase = np.linspace(-np.pi, np.pi, x.size)
     reconstruction = 0.54 - 0.20 * np.cos(phase) + 0.08 * np.cos(2 * phase + 0.4)
@@ -200,7 +209,7 @@ def toc_graphic() -> None:
         linewidth=0.6,
         zorder=4,
     )
-    axis.text(0.49, 0.86, "prior", color=BLUE, fontsize=7.0, fontweight="bold")
+    axis.text(0.49, 0.86, "prior", color=BLUE, fontsize=10.0, fontweight="bold")
     axis.text(
         0.80,
         0.12,
@@ -208,7 +217,7 @@ def toc_graphic() -> None:
         ha="center",
         va="center",
         color=ORANGE,
-        fontsize=7.2,
+        fontsize=10.0,
         fontweight="bold",
     )
 
@@ -216,6 +225,7 @@ def toc_graphic() -> None:
 
 
 def task_and_method() -> None:
+    """Draw a data-free schematic of the registered sparse-reconstruction task."""
     fig = plt.figure(figsize=(10.4, 4.25))
     grid = fig.add_gridspec(1, 2, width_ratios=[1.05, 1.55], wspace=0.22)
 
@@ -637,6 +647,7 @@ def scaffold_sensitivity() -> None:
 
 
 def confirmation_operating_characteristics() -> None:
+    """Show full confirmation error distributions and a cross-budget contrast."""
     ecdf = pd.read_csv(TABLES / "confirmation_error_ecdf.csv")
     summary = pd.read_csv(TABLES / "confirmation_budget_summary.csv")
     methods = ["learned_active", "zero_shot_active", "learned_equal"]
@@ -782,6 +793,7 @@ def confirmation_operating_characteristics() -> None:
 
 
 def selective_use_validation() -> None:
+    """Show the registered fourth-shard applicability-gate result."""
     effects = pd.read_csv(TABLES / "e016c_selective_effects.csv")
     failures = pd.read_csv(TABLES / "e016c_selective_failures.csv")
     selected = effects[effects["stratum"].isin(["accepted", "rejected"])].copy()

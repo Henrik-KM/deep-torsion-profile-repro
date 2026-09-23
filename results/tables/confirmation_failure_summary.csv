@@ -1,0 +1,9 @@
+record_type,comparator,metric,profile_count,threshold,win_count,tie_count,loss_count,loss_fraction,median_heavy_atoms,mean_whole_similarity,mean_torsion_descriptor_distance,common_central_bond_class
+pairwise_outcome,zero_shot_active,profile_mae,1000,,636.0,0.0,364,0.364,,,,
+pairwise_outcome,zero_shot_active,barrier_abs_error,1000,,276.0,528.0,196,0.196,,,,
+joint_endpoint_regression,zero_shot_active,both_primary_endpoints,1000,,,,99,0.099,,,,
+pairwise_outcome,learned_equal,profile_mae,1000,,546.0,1.0,453,0.453,,,,
+pairwise_outcome,learned_equal,barrier_abs_error,1000,,647.0,214.0,139,0.139,,,,
+joint_endpoint_regression,learned_equal,both_primary_endpoints,1000,,,,98,0.098,,,,
+learned_upper_5pct_error_tail,none,profile_mae,1000,0.8400900901932327,,,50,0.05,18.0,0.31261841025964565,0.4467298552894626,C-C
+learned_upper_5pct_error_tail,none,barrier_abs_error,1000,0.5070032141434192,,,50,0.05,17.0,0.3113582767235302,0.3642872489412165,C-C

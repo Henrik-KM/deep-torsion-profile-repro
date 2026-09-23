@@ -1,0 +1,13 @@
+stratum,profile_count,comparator,metric,effect_type,effect,ci_low,ci_high
+all,1000,zero_shot_active,profile_mae,relative_reduction,0.1865147879271294,0.14979692572745326,0.22239785846965676
+all,1000,zero_shot_active,barrier_abs_error,relative_reduction,0.32950806381986963,0.2210037127434179,0.4270265193184191
+all,1000,learned_equal,profile_mae,relative_reduction,0.11683380616060579,0.07031153667737258,0.16601101908451313
+all,1000,learned_equal,barrier_abs_error,relative_reduction,0.7043838009278721,0.6410418853571407,0.7587492041593639
+accepted,735,zero_shot_active,profile_mae,relative_reduction,0.21457348457583192,0.17195880388762433,0.25511786976215456
+accepted,735,zero_shot_active,barrier_abs_error,relative_reduction,0.3533111391303049,0.21584537314004426,0.46734728793931996
+accepted,735,learned_equal,profile_mae,relative_reduction,0.10416548700953598,0.05600274173319638,0.15087106497301958
+accepted,735,learned_equal,barrier_abs_error,relative_reduction,0.6931003311629789,0.6286195792582657,0.7511460431698305
+rejected,265,zero_shot_active,profile_mae,relative_reduction,0.10003319636328112,0.031771977230715925,0.16474833348885567
+rejected,265,zero_shot_active,barrier_abs_error,relative_reduction,0.2704294180928417,0.0851845813844227,0.441394711665024
+rejected,265,learned_equal,profile_mae,relative_reduction,0.14919729376970692,0.03105794270904092,0.2578200426674164
+rejected,265,learned_equal,barrier_abs_error,relative_reduction,0.7265055892422658,0.5689294424537769,0.8270939003158331

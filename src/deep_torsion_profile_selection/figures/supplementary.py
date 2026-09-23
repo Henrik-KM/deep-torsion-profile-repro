@@ -1,3 +1,7 @@
+"""Generate supporting-information figures and source-backed LaTeX tables."""
+
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -321,6 +325,7 @@ def failure_examples() -> None:
 
 
 def selective_robustness() -> None:
+    """Show the fixed E018 sensitivity analyses and operational fallback."""
     coverage = pd.read_csv(TABLES / "e018_selective_risk_coverage.csv")
     subgroups = pd.read_csv(TABLES / "e018_selective_subgroup_effects.csv")
     hybrid = pd.read_csv(TABLES / "e018_selective_hybrid_policy.csv")
@@ -515,7 +520,7 @@ def _coverage_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Chemical coverage of the development and confirmation populations. Continuous entries are median [first quartile, third quartile]; categorical entries are counts (fractions). The source-consistent central-bond labels come from the frozen torsion descriptor, not inferred atom-map positions.}",
+        r"\caption{Chemical coverage of the development ($n=1{,}000$) and confirmation ($n=1{,}000$) populations. Continuous entries are median [first quartile, third quartile]; categorical entries are counts (fractions). This is descriptive; no inferential tests or $p$ values are reported. The source-consistent central-bond labels come from the frozen torsion descriptor, not inferred atom-map positions.}",
         r"\label{tab:si_coverage}",
         r"\begin{tabular}{lrr}",
         r"\toprule",
@@ -590,7 +595,7 @@ def _applicability_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Post-confirmatory applicability effects across target-blind torsion-chemistry distance quartiles. Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals. Positive values favor learned active acquisition. Quartiles were fixed from the confirmation coverage variable before stratified effects were computed.}",
+        r"\caption{Post-confirmatory applicability effects across target-blind torsion-chemistry distance quartiles ($n=250$ profiles per quartile). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples). Positive values favor learned active acquisition. Quartiles were fixed from the confirmation coverage variable before stratified effects were computed. These are descriptive, unadjusted estimates; no null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_applicability}",
         r"\footnotesize",
         r"\begin{tabular}{clrrrr}",
@@ -644,7 +649,7 @@ def _subgroup_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Post-confirmatory chemical-subgroup effects versus zero-shot active acquisition. Values are paired relative error reductions in percent with 95\% descriptive profile-bootstrap intervals. Small charged and C--O/other strata have correspondingly wide intervals.}",
+        r"\caption{Post-confirmatory chemical-subgroup effects versus zero-shot active acquisition. The $n$ column gives profile counts; entries are paired relative error reductions in percent with 95\% descriptive profile-bootstrap intervals (5,000 resamples). Small charged and C--O/other strata have correspondingly wide intervals. No multiplicity-adjusted or null-hypothesis tests were used; no $p$ values are reported.}",
         r"\label{tab:si_subgroups}",
         r"\begin{tabular}{lr@{\hspace{1.25em}}rr}",
         r"\toprule",
@@ -677,7 +682,7 @@ def _failure_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Profile-level wins, ties and losses for learned active acquisition at six reveals. A win means smaller error for learned active acquisition; ties use the frozen numerical tolerance. Joint regression means that both primary endpoints were worse for the proposed policy.}",
+        r"\caption{Profile-level wins, ties and losses for learned active acquisition at six reveals ($n=1{,}000$ confirmation profiles). Counts are descriptive; a win means smaller error for learned active acquisition, ties use the frozen numerical tolerance, and a joint regression means both primary endpoints were worse for the proposed policy. No inferential tests or $p$ values are reported.}",
         r"\label{tab:si_failures}",
         r"\begin{tabular}{llrrrr}",
         r"\toprule",
@@ -716,7 +721,7 @@ def _representatives_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Deterministically selected representative confirmation profiles shown in Figure~\ref{fig:si_failures}. Errors are in kcal~mol$^{-1}$. The worst regression rows are disclosed examples, not estimates of subgroup performance.}",
+        r"\caption{Four profiles deterministically selected from the $n=1{,}000$ confirmation population and shown in Figure~\ref{fig:si_failures}. Errors are in kcal~mol$^{-1}$. These examples are descriptive, not estimates of subgroup performance; no inferential tests or $p$ values are reported.}",
         r"\label{tab:si_representatives}",
         r"\scriptsize",
         r"\begin{tabular}{lp{2.2cm}crrrrrr}",
@@ -754,7 +759,7 @@ def _selective_effects_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Registered E016C fresh-shard effects at six reveals. Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals; positive values favor learned active acquisition. The accepted regime was defined by the frozen target-blind distance cutoff before shard-3 target-energy access.}",
+        r"\caption{Registered E016C fresh-shard effects at six reveals ($n=1{,}000$ total; accepted $n=735$, rejected $n=265$). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples); positive values favor learned active acquisition. The accepted regime was defined by the frozen target-blind distance cutoff before shard-3 target-energy access. No null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_selective_effects}",
         r"\small",
         r"\begin{tabular}{lrlrr}",
@@ -790,7 +795,7 @@ def _selective_failures_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{E016C joint two-endpoint regressions at six reveals. A joint regression means learned active acquisition had both larger profile MAE and larger barrier absolute error than the named comparator. The registered concentration gate applied only to the zero-shot active comparison.}",
+        r"\caption{E016C joint two-endpoint regressions at six reveals. The Profiles column is $n$ for each stratum. A joint regression means learned active acquisition had both larger profile MAE and larger barrier absolute error than the named comparator. Entries are descriptive counts and proportions; the registered concentration gate applied only to the zero-shot active comparison. No null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_selective_failures}",
         r"\begin{tabular}{llrrr}",
         r"\toprule",

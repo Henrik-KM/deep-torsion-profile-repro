@@ -1,0 +1,5 @@
+comparator,metric,effect_type,effect,ci_low,ci_high,profile_count
+zero_shot_active,profile_mae,relative_reduction,0.21074302826325297,0.1708976690053686,0.24852540342240442,1000
+zero_shot_active,barrier_abs_error,relative_reduction,0.37401286844789194,0.16842573659420215,0.5768869886047475,1000
+learned_equal,profile_mae,relative_reduction,0.11730290949348643,0.011365698043593294,0.19433179431709632,1000
+learned_equal,barrier_abs_error,relative_reduction,0.6324589503502663,0.39745591602376834,0.787367772331832,1000

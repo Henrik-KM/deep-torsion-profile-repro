@@ -1,0 +1,7 @@
+stratum,comparator,profile_count,double_regression_count,double_regression_rate
+all,zero_shot_active,1000,143,0.143
+accepted,zero_shot_active,735,94,0.12789115646258503
+rejected,zero_shot_active,265,49,0.18490566037735848
+all,learned_equal,1000,95,0.095
+accepted,learned_equal,735,72,0.09795918367346938
+rejected,learned_equal,265,23,0.08679245283018867

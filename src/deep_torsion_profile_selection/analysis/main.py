@@ -1,3 +1,5 @@
+"""Build synthesis tables from the registered sparse-acquisition outputs."""
+
 from __future__ import annotations
 
 import hashlib
@@ -85,6 +87,7 @@ def summarize_budget(
 def confirmation_six_reveal_comparison(
     summary: pd.DataFrame,
 ) -> pd.DataFrame:
+    """Return the complete registered comparison at the primary reveal budget."""
     labels = {
         "learned_active": "Learned active (proposed)",
         "zero_shot_active": "Zero-shot UMA, active",
@@ -126,6 +129,7 @@ def confirmation_six_reveal_comparison(
 
 
 def representation_readiness_summary(tables: Path = TABLES) -> pd.DataFrame:
+    """Summarize the molecule-held-out representation comparison over model seeds."""
     frame = pd.read_csv(tables / "e002_representation_readiness.csv")
     selected = frame[frame["role"] == "test"].copy()
     metrics = [
@@ -147,6 +151,7 @@ def representation_readiness_summary(tables: Path = TABLES) -> pd.DataFrame:
 
 
 def write_confirmation_latex_table(comparison: pd.DataFrame) -> None:
+    """Write a manuscript table whose numerical cells trace to the CSV output."""
     pivot = comparison.pivot(
         index=["method", "method_label"],
         columns="metric",
@@ -156,7 +161,7 @@ def write_confirmation_latex_table(comparison: pd.DataFrame) -> None:
     lines = [
         r"\begin{table}[!b]",
         r"\centering",
-        r"\caption{Complete confirmation comparison at six revealed energies.}",
+        r"\caption{Complete confirmation comparison at six revealed energies ($n=1{,}000$ molecule-disjoint profiles). Entries are mean profile MAE and barrier absolute error with 95\% profile-bootstrap intervals (5,000 resamples). No null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:confirmation_comparison}",
         r"\small",
         r"\begin{tabular}{lcc}",

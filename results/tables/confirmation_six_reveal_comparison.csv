@@ -1,0 +1,17 @@
+method,method_label,budget,metric,mean,ci_low,ci_high,profile_count,bootstrap_repeats
+learned_active,Learned active (proposed),6,barrier_abs_error,0.15247703417369132,0.10098773808627297,0.2211874728480808,1000,5000
+learned_active,Learned active (proposed),6,profile_mae,0.33987293494838594,0.30560231041385927,0.38135648719745185,1000,5000
+zero_shot_active,"Zero-shot UMA, active",6,barrier_abs_error,0.22970796959959636,0.17120191640277715,0.30349370454296465,1000,5000
+zero_shot_active,"Zero-shot UMA, active",6,profile_mae,0.45016347491536596,0.4094563679558158,0.49678576255355417,1000,5000
+learned_equal,"Learned prior, equal spacing",6,barrier_abs_error,0.4032382031098289,0.3426881873349626,0.47717587089506014,1000,5000
+learned_equal,"Learned prior, equal spacing",6,profile_mae,0.3697370954660024,0.33910243393482825,0.4048393969669911,1000,5000
+learned_variance,"Learned prior, variance only",6,barrier_abs_error,0.4626015694649183,0.40331611604767226,0.5377644273504981,1000,5000
+learned_variance,"Learned prior, variance only",6,profile_mae,0.3795780081276653,0.3498396185202169,0.41396252761157337,1000,5000
+equal_spacing_interpolation,Equal-spacing interpolation,6,barrier_abs_error,0.8850625,0.796837109375,0.977408203125,1000,5000
+equal_spacing_interpolation,Equal-spacing interpolation,6,profile_mae,1.048684812717791,1.0048577229550453,1.092067311906642,1000,5000
+path_gp_active,"Path-local GP, extrema active",6,barrier_abs_error,1.0656820269149216,0.956606403030572,1.1786100044783485,1000,5000
+path_gp_active,"Path-local GP, extrema active",6,profile_mae,1.3530023853803916,1.2979326840223504,1.4092145939670517,1000,5000
+path_gp_variance,"Path-local GP, variance only",6,barrier_abs_error,1.3215839998795724,1.204095824182287,1.4518076682001309,1000,5000
+path_gp_variance,"Path-local GP, variance only",6,profile_mae,1.0508220047798769,1.0090758623832303,1.094757971831877,1000,5000
+random_path_gp,"Path-local GP, random",6,barrier_abs_error,2.170282898869301,2.054295166749491,2.2864097682314273,1000,5000
+random_path_gp,"Path-local GP, random",6,profile_mae,1.5169686253518821,1.4548834728329967,1.580467170109368,1000,5000
