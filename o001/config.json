@@ -1,0 +1,24 @@
+{
+  "confidence": 0.95,
+  "bootstrap_resamples": 10000,
+  "bootstrap_seed": 20260811,
+  "methods": [
+    "learned_active",
+    "learned_equal",
+    "learned_variance",
+    "zero_shot_active",
+    "path_gp_variance",
+    "path_gp_active",
+    "equal_spacing_interpolation",
+    "random_path_gp"
+  ],
+  "matched_comparators": [
+    "learned_equal",
+    "learned_variance",
+    "zero_shot_active",
+    "path_gp_active",
+    "path_gp_variance",
+    "equal_spacing_interpolation",
+    "random_path_gp"
+  ]
+}
