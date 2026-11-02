@@ -29,7 +29,7 @@ def target_free_table() -> None:
     lines = [
         r"\begin{table}[ht]",
         r"\centering",
-        r"\caption{Six-reveal reconstruction on 32 exposed external profiles with target-free input geometries ($n=32$). Entries are mean profile MAE and barrier error in kcal\,mol$^{-1}$ across profiles. These exposed development data are descriptive; no inferential tests or $p$ values are reported.}",
+        r"\caption{Six-label reconstruction on 32 exposed external profiles with target-free input geometries ($n=32$). Entries are mean profile MAE and barrier error in kcal\,mol$^{-1}$ across profiles. These exposed development data are descriptive; no inferential tests or $p$ values are reported.}",
         r"\label{tab:si_target_free}",
         r"\begin{tabular}{lrr}",
         r"\toprule",

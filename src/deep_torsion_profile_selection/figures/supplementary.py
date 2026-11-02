@@ -6,40 +6,38 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
+
+from deep_torsion_profile_selection.figures.common import (
+    METRICS,
+    contrast_forest,
+    ecdf_panel,
+)
+from deep_torsion_profile_selection.figures.style import (
+    CONTRAST_LABELS,
+    INK,
+    KCAL,
+    LIGHT,
+    METHOD_COLORS,
+    METHOD_LABELS,
+    METHOD_MARKERS,
+    MID,
+    SI_WIDTH,
+    apply_style,
+    label_panels,
+)
 
 TABLES = Path("results/tables")
 FIGURES = Path("results/figures")
 PAPER_TABLES = Path("paper/tables")
 
-BLUE = "#2563A6"
-ORANGE = "#D97706"
-PURPLE = "#7857A8"
-INK = "#20252B"
-MID = "#68727D"
-LIGHT = "#D6DADF"
+METHODS = ["learned_active", "zero_shot_active", "learned_equal"]
+COMPARATORS = ["zero_shot_active", "learned_equal"]
+NEUTRAL = "#9AA3AD"
 ROW_END = r"\\"
-
-
-def _style() -> None:
-    mpl.rcParams.update(
-        {
-            "font.family": "DejaVu Sans",
-            "font.size": 8.5,
-            "axes.titlesize": 9.5,
-            "axes.labelsize": 8.5,
-            "axes.edgecolor": INK,
-            "axes.linewidth": 0.8,
-            "xtick.color": INK,
-            "ytick.color": INK,
-            "text.color": INK,
-            "pdf.fonttype": 42,
-            "ps.fonttype": 42,
-        }
-    )
 
 
 def _promote_if_changed(temporary: Path, destination: Path) -> None:
@@ -72,41 +70,50 @@ def _save(fig: plt.Figure, stem: str) -> None:
                 }
             },
         ),
-        (".png", {"dpi": 240}),
+        (".png", {"dpi": 300}),
     ):
         destination = FIGURES / f"{stem}{suffix}"
         temporary = FIGURES / f".{stem}.new{suffix}"
-        fig.savefig(temporary, bbox_inches="tight", **options)
+        fig.savefig(temporary, bbox_inches="tight", pad_inches=0.02, **options)
         _promote_if_changed(temporary, destination)
     plt.close(fig)
 
 
-def _panel_label(axis: plt.Axes, label: str) -> None:
-    axis.text(
-        -0.16,
-        1.08,
-        label,
-        transform=axis.transAxes,
-        fontsize=10,
-        fontweight="bold",
-        va="top",
+def _errorbar(
+    axis: plt.Axes,
+    x: np.ndarray,
+    y: np.ndarray,
+    comparator: str,
+    *,
+    xerr: np.ndarray | None = None,
+    yerr: np.ndarray | None = None,
+    filled: bool = True,
+    label: str | None = None,
+) -> None:
+    """Draw a paired contrast in the colour and marker of its comparator."""
+    color = METHOD_COLORS[comparator]
+    axis.errorbar(
+        x,
+        y,
+        xerr=xerr,
+        yerr=yerr,
+        fmt=METHOD_MARKERS[comparator],
+        color=color,
+        markersize=4.4,
+        markerfacecolor=color if filled else "white",
+        markeredgecolor=color,
+        markeredgewidth=0.9,
+        elinewidth=1.0,
+        capsize=2.0,
+        capthick=0.9,
+        label=label,
+        zorder=3,
     )
 
 
 def _effect_panel(axis: plt.Axes, effects: pd.DataFrame, metric: str) -> None:
-    labels = [
-        "Q1\nnearest",
-        "Q2",
-        "Q3",
-        "Q4\nfarthest",
-    ]
-    colors = {"zero_shot_active": BLUE, "learned_equal": ORANGE}
-    comparator_labels = {
-        "zero_shot_active": "vs zero-shot active",
-        "learned_equal": "vs learned equal spacing",
-    }
     x = np.arange(4, dtype=float)
-    for comparator, offset in (("zero_shot_active", -0.09), ("learned_equal", 0.09)):
+    for comparator, offset in (("zero_shot_active", -0.12), ("learned_equal", 0.12)):
         subset = effects[
             (effects["axis"] == "torsion_descriptor_distance_quartile")
             & (effects["metric"] == metric)
@@ -117,22 +124,21 @@ def _effect_panel(axis: plt.Axes, effects: pd.DataFrame, metric: str) -> None:
         estimate = 100.0 * subset["relative_reduction"].to_numpy(float)
         low = 100.0 * subset["ci_low"].to_numpy(float)
         high = 100.0 * subset["ci_high"].to_numpy(float)
-        axis.errorbar(
+        _errorbar(
+            axis,
             x + offset,
             estimate,
+            comparator,
             yerr=np.vstack([estimate - low, high - estimate]),
-            fmt="o",
-            markersize=4.6,
-            capsize=2.5,
-            color=colors[comparator],
-            label=comparator_labels[comparator],
+            label=CONTRAST_LABELS[comparator],
         )
-    axis.axhline(0.0, color=MID, linewidth=0.8, linestyle="--")
-    axis.set_xticks(x, labels)
+    axis.axhline(0.0, color=INK, linewidth=0.6)
+    axis.set_xticks(x, ["Q1\nnearest", "Q2", "Q3", "Q4\nfarthest"])
+    axis.set_xlim(-0.5, 3.5)
+    axis.tick_params(axis="x", length=0)
     axis.set_xlabel("Target-blind torsion-distance quartile")
-    axis.set_ylabel("Paired relative error reduction (%)")
-    axis.grid(axis="y", color=LIGHT, linewidth=0.6, alpha=0.75)
-    axis.spines[["top", "right"]].set_visible(False)
+    axis.set_ylabel("Relative error reduction (%)")
+    axis.grid(axis="y")
 
 
 def applicability_domain() -> None:
@@ -140,90 +146,69 @@ def applicability_domain() -> None:
     characteristics = characteristics[characteristics["population"] == "confirmation"]
     effects = pd.read_csv(TABLES / "confirmation_applicability_effects.csv")
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.15, 5.45))
+    fig, axes = plt.subplots(2, 2, figsize=(SI_WIDTH, 4.7), layout="constrained")
     similarity = characteristics["max_whole_similarity"].to_numpy(float)
-    axes[0, 0].hist(similarity, bins=24, color=BLUE, alpha=0.88, edgecolor="white")
-    for value, label in zip(
-        np.quantile(similarity, [0.25, 0.5, 0.75]),
-        ["Q1", "Q2", "Q3"],
-        strict=True,
-    ):
+    axes[0, 0].hist(
+        similarity, bins=24, color=NEUTRAL, edgecolor="white", linewidth=0.5
+    )
+    for value in np.quantile(similarity, [0.25, 0.5, 0.75]):
         axes[0, 0].axvline(value, color=INK, linewidth=0.7, linestyle=":")
-        axes[0, 0].text(
-            value,
-            axes[0, 0].get_ylim()[1] * 0.94,
-            label,
-            rotation=90,
-            va="top",
-            ha="right",
-            fontsize=7,
-        )
-    axes[0, 0].set_xlabel("Maximum whole-molecule Morgan similarity\nto development")
+    axes[0, 0].set_xlabel("Maximum Morgan similarity to development")
     axes[0, 0].set_ylabel("Confirmation profiles")
     axes[0, 0].set_title("Whole-molecule coverage")
+    axes[0, 0].grid(axis="y")
 
     distance = np.sort(
         characteristics["min_torsion_descriptor_distance"].to_numpy(float)
     )
-    plotted_distance = np.log1p(distance)
     ecdf = np.arange(1, distance.size + 1) / distance.size
-    axes[0, 1].plot(plotted_distance, ecdf, color=ORANGE, linewidth=1.8)
-    for value, label in zip(
-        np.quantile(distance, [0.25, 0.5, 0.75]),
-        ["Q1", "Q2", "Q3"],
-        strict=True,
-    ):
-        plotted_value = np.log1p(value)
-        axes[0, 1].axvline(plotted_value, color=INK, linewidth=0.7, linestyle=":")
-        axes[0, 1].text(
-            plotted_value, 0.08, label, rotation=90, va="bottom", ha="right", fontsize=7
-        )
-    tick_values = np.array([0.0, 0.1, 0.25, 0.5, 1.0, 2.0, 3.0])
-    axes[0, 1].set_xticks(
-        np.log1p(tick_values),
-        ["0", "0.1", "0.25", "0.5", "1", "2", "3"],
+    axes[0, 1].step(
+        np.log1p(np.concatenate(([0.0], distance))),
+        np.concatenate(([0.0], ecdf)),
+        where="post",
+        color=INK,
+        linewidth=1.3,
     )
-    axes[0, 1].set_xlabel(
-        "Nearest standardized torsion-chemistry\ndistance to development"
+    quartiles = np.quantile(distance, [0.25, 0.5, 0.75])
+    for value in quartiles:
+        axes[0, 1].axvline(np.log1p(value), color=INK, linewidth=0.7, linestyle=":")
+    axes[0, 1].annotate(
+        "Q3, later fixed\nas the cutoff",
+        (np.log1p(quartiles[2]), 0.12),
+        xytext=(4, 0),
+        textcoords="offset points",
+        fontsize=6.3,
+        color=MID,
+        va="bottom",
     )
-    axes[0, 1].set_ylabel("Cumulative fraction")
+    tick_values = np.array([0.0, 0.25, 0.5, 1.0, 2.0, 3.0])
+    axes[0, 1].set_xticks(np.log1p(tick_values), ["0", "0.25", "0.5", "1", "2", "3"])
+    axes[0, 1].set_ylim(0, 1.02)
+    axes[0, 1].set_xlabel("Nearest torsion-chemistry distance to development")
+    axes[0, 1].set_ylabel("Cumulative fraction of profiles")
     axes[0, 1].set_title("Torsion-local coverage")
+    axes[0, 1].grid(axis="y")
 
     _effect_panel(axes[1, 0], effects, "profile_mae")
-    axes[1, 0].set_title("Profile MAE")
+    axes[1, 0].set_title("Profile MAE by torsion distance")
     _effect_panel(axes[1, 1], effects, "barrier_abs_error")
-    axes[1, 1].set_title("Barrier absolute error")
-
-    for label, axis in zip("abcd", axes.ravel(), strict=True):
-        _panel_label(axis, label)
-        if axis in axes[0]:
-            axis.spines[["top", "right"]].set_visible(False)
-            axis.grid(axis="y", color=LIGHT, linewidth=0.6, alpha=0.65)
+    axes[1, 1].set_title("Barrier error by torsion distance")
 
     handles, labels = axes[1, 1].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        loc="lower center",
-        ncol=2,
-        frameon=False,
-        bbox_to_anchor=(0.5, -0.01),
-    )
-    fig.suptitle(
-        "Post-confirmatory applicability audit on the unchanged 1,000-profile E006B population",
-        fontsize=10.5,
-        fontweight="bold",
-        y=1.01,
-    )
-    fig.tight_layout(rect=(0, 0.055, 1, 0.98), h_pad=2.2, w_pad=1.5)
-    _save(fig, "figS1_applicability_domain")
+    fig.legend(handles, labels, loc="outside lower center", ncol=2)
+    label_panels(fig, zip(axes.ravel(), "abcd", strict=True))
+    _save(fig, "figS3_applicability_domain")
 
 
 def _cyclic_xy(rows: pd.DataFrame, column: str) -> tuple[np.ndarray, np.ndarray]:
+    """Close a periodic profile on both sides of the plotted angle range."""
     ordered = rows.sort_values("angle_rad")
     x = np.degrees(ordered["angle_rad"].to_numpy(float))
     y = ordered[column].to_numpy(float)
-    return np.append(x, x[0] + 360.0), np.append(y, y[0])
+    return (
+        np.concatenate(([x[-1] - 360.0], x, [x[0] + 360.0])),
+        np.concatenate(([y[-1]], y, [y[0]])),
+    )
 
 
 def failure_examples() -> None:
@@ -237,91 +222,76 @@ def failure_examples() -> None:
     ]
     titles = {
         "median_learned_profile_mae": "Median learned-active profile MAE",
-        "p95_learned_profile_mae": "Learned-active profile-MAE p95",
-        "largest_profile_mae_regression_vs_zero_shot": "Largest profile-MAE regression vs zero-shot",
+        "p95_learned_profile_mae": "95th-percentile learned-active profile MAE",
+        "largest_profile_mae_regression_vs_zero_shot": "Largest MAE regression vs zero-shot active",
         "largest_barrier_regression_vs_learned_equal": "Largest barrier regression vs equal spacing",
     }
-    colors = {
-        "learned_active": BLUE,
-        "zero_shot_active": ORANGE,
-        "learned_equal": PURPLE,
-    }
-    labels = {
-        "learned_active": "learned active",
-        "zero_shot_active": "zero-shot active",
-        "learned_equal": "learned equal spacing",
-    }
-    markers = {"learned_active": "o", "zero_shot_active": "s", "learned_equal": "^"}
 
-    fig, axes = plt.subplots(2, 2, figsize=(7.15, 5.25))
-    for label, role, axis in zip("abcd", roles, axes.ravel(), strict=True):
+    fig, axes = plt.subplots(2, 2, figsize=(SI_WIDTH, 4.9), layout="constrained")
+    for role, axis in zip(roles, axes.ravel(), strict=True):
         role_rows = curves[curves["role"] == role]
         profile_row = profiles[profiles["role"] == role].iloc[0]
         target_rows = role_rows[role_rows["method"] == "learned_active"]
         x_target, y_target = _cyclic_xy(target_rows, "target_relative_kcal_mol")
-        axis.plot(x_target, y_target, color=INK, linewidth=1.8, label="target")
-        for method in ("learned_active", "zero_shot_active", "learned_equal"):
+        axis.plot(x_target, y_target, color=INK, linewidth=1.7, zorder=2)
+        for method in METHODS:
             method_rows = role_rows[role_rows["method"] == method]
             x, y = _cyclic_xy(method_rows, "posterior_relative_kcal_mol")
-            axis.plot(
-                x,
-                y,
-                color=colors[method],
-                linewidth=1.15,
-                alpha=0.92,
-                label=labels[method],
-            )
+            color = METHOD_COLORS[method]
+            axis.plot(x, y, color=color, linewidth=1.1, alpha=0.95, zorder=3)
             selected = method_rows[
                 method_rows["selected"].astype(str).str.lower() == "true"
             ]
-            axis.scatter(
+            axis.plot(
                 np.degrees(selected["angle_rad"].to_numpy(float)),
                 selected["target_relative_kcal_mol"].to_numpy(float),
-                s=18,
-                marker=markers[method],
-                facecolor="white",
-                edgecolor=colors[method],
-                linewidth=0.9,
+                linestyle="None",
+                marker=METHOD_MARKERS[method],
+                markersize=4.2,
+                markerfacecolor=color,
+                markeredgecolor="white",
+                markeredgewidth=0.5,
                 zorder=4,
             )
-        axis.set_title(titles[role], loc="left", fontweight="bold")
-        metric_note = (
-            f"active MAE {profile_row['learned_active_profile_mae']:.2f}; "
-            f"barrier error {profile_row['learned_active_barrier_abs_error']:.2f} kcal mol$^{{-1}}$"
-        )
-        axis.text(
-            0.01,
-            0.98,
-            metric_note,
-            transform=axis.transAxes,
-            va="top",
-            fontsize=6.8,
+        axis.set_title(titles[role], pad=13)
+        axis.annotate(
+            (
+                f"Learned active: MAE "
+                f"{profile_row['learned_active_profile_mae']:.2f}, barrier error "
+                f"{profile_row['learned_active_barrier_abs_error']:.2f} {KCAL}"
+            ),
+            (0, 1),
+            xycoords="axes fraction",
+            xytext=(0, 3),
+            textcoords="offset points",
+            va="bottom",
+            fontsize=6.4,
             color=MID,
         )
         axis.set_xlabel("Torsion angle (degrees)")
-        axis.set_ylabel("Relative energy (kcal mol$^{-1}$)")
+        axis.set_ylabel(f"Relative energy ({KCAL})")
+        axis.set_xlim(-180, 180)
         axis.set_xticks([-180, -90, 0, 90, 180])
-        axis.grid(color=LIGHT, linewidth=0.55, alpha=0.65)
-        axis.spines[["top", "right"]].set_visible(False)
-        _panel_label(axis, label)
+        axis.grid(color=LIGHT)
 
-    handles, legend_labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        legend_labels,
-        loc="lower center",
-        ncol=4,
-        frameon=False,
-        bbox_to_anchor=(0.5, -0.01),
+    handles = [Line2D([], [], color=INK, linewidth=1.7, label="DFT target")]
+    handles.extend(
+        Line2D(
+            [],
+            [],
+            color=METHOD_COLORS[method],
+            linewidth=1.1,
+            marker=METHOD_MARKERS[method],
+            markersize=4.2,
+            markeredgecolor="white",
+            markeredgewidth=0.5,
+            label=METHOD_LABELS[method].replace(" (proposed)", ""),
+        )
+        for method in METHODS
     )
-    fig.suptitle(
-        "Representative confirmation profiles and disclosed failure cases",
-        fontsize=10.5,
-        fontweight="bold",
-        y=1.01,
-    )
-    fig.tight_layout(rect=(0, 0.055, 1, 0.98), h_pad=2.0, w_pad=1.3)
-    _save(fig, "figS2_failure_examples")
+    fig.legend(handles=handles, loc="outside lower center", ncol=4)
+    label_panels(fig, zip(axes.ravel(), "abcd", strict=True))
+    _save(fig, "figS4_failure_examples")
 
 
 def selective_robustness() -> None:
@@ -332,79 +302,64 @@ def selective_robustness() -> None:
     coverage = coverage[coverage["analysis_type"] == "relative_reduction"]
     hybrid_effects = hybrid[hybrid["analysis_type"] == "relative_reduction"]
 
-    comparator_labels = {
-        "zero_shot_active": "vs zero-shot active",
-        "learned_equal": "vs learned equal spacing",
-    }
-    comparator_styles = {
-        "zero_shot_active": (BLUE, "-", "o"),
-        "learned_equal": (ORANGE, "--", "s"),
-    }
-    fig, axes = plt.subplots(2, 2, figsize=(7.15, 5.75))
-
-    for label, axis, metric, title in zip(
-        "ab",
+    fig, axes = plt.subplots(2, 2, figsize=(SI_WIDTH, 5.0), layout="constrained")
+    for axis, metric, title in zip(
         axes[0],
         ("profile_mae", "barrier_abs_error"),
-        ("Profile MAE", "Barrier absolute error"),
+        ("Profile MAE by retained coverage", "Barrier error by retained coverage"),
         strict=True,
     ):
-        for comparator in ("zero_shot_active", "learned_equal"):
+        for comparator in COMPARATORS:
             rows = coverage[
-                (coverage["metric"] == metric)
-                & (coverage["comparator"] == comparator)
+                (coverage["metric"] == metric) & (coverage["comparator"] == comparator)
             ].sort_values("coverage")
-            color, linestyle, marker = comparator_styles[comparator]
+            color = METHOD_COLORS[comparator]
             axis.plot(
                 100 * rows["coverage"],
                 100 * rows["effect"],
                 color=color,
-                linestyle=linestyle,
-                marker=marker,
-                markersize=3.5,
-                linewidth=1.25,
-                markerfacecolor=("white" if comparator == "learned_equal" else color),
-                label=comparator_labels[comparator],
+                marker=METHOD_MARKERS[comparator],
+                markersize=3.6,
+                markeredgecolor="white",
+                markeredgewidth=0.4,
+                linewidth=1.2,
+                label=CONTRAST_LABELS[comparator],
             )
-        axis.axhline(0, color=INK, linewidth=0.75)
-        axis.axvline(73.5, color=PURPLE, linewidth=1.0, linestyle=":")
-        if metric == "profile_mae":
-            axis.text(
-                73.5,
-                0.98,
-                " frozen\n cutoff",
-                color=PURPLE,
-                fontsize=6.8,
-                va="top",
-                ha="left",
-                transform=axis.get_xaxis_transform(),
-            )
-        axis.set_title(title, loc="left", fontweight="bold")
-        axis.set_xlabel("Profiles retained by increasing distance (%)")
+        axis.axhline(0, color=INK, linewidth=0.6)
+        axis.axvline(73.5, color=INK, linewidth=0.8, linestyle=":")
+        axis.annotate(
+            "frozen cutoff\n(73.5%)",
+            (73.5, 0.09),
+            xycoords=("data", "axes fraction"),
+            xytext=(-3, 0),
+            textcoords="offset points",
+            ha="right",
+            va="bottom",
+            fontsize=6.3,
+            color=MID,
+        )
+        axis.set_title(title)
+        axis.set_xlabel("Profiles retained, nearest first (%)")
         axis.set_ylabel("Relative error reduction (%)")
         axis.set_xlim(8, 102)
-        axis.set_xticks([10, 40, 73.5, 100], ["10", "40", "73.5", "100"])
-        axis.grid(color=LIGHT, linewidth=0.55, alpha=0.75)
-        axis.spines[["top", "right"]].set_visible(False)
-        _panel_label(axis, label)
+        axis.set_xticks([10, 25, 50, 75, 100])
+        axis.grid(color=LIGHT)
 
     subgroup_axis = axes[1, 0]
     subgroup_rows = subgroups[subgroups["comparator"] == "zero_shot_active"]
     group_order = [
-        ("central_bond_group", "C-C", "C-C bond", 385),
-        ("central_bond_group", "C-N", "C-N bond", 284),
+        ("central_bond_group", "C-C", "C–C bond", 385),
+        ("central_bond_group", "C-N", "C–N bond", 284),
         ("central_bond_group", "other", "Other bond", 66),
         ("heavy_atom_bin", "at_most_12", "$\\leq$12 heavy atoms", 72),
-        ("heavy_atom_bin", "13_to_20", "13--20 heavy atoms", 535),
+        ("heavy_atom_bin", "13_to_20", "13–20 heavy atoms", 535),
         ("heavy_atom_bin", "over_20", "$>$20 heavy atoms", 128),
     ]
-    metric_styles = {
-        "profile_mae": (BLUE, "o", "Profile MAE"),
-        "barrier_abs_error": (ORANGE, "s", "Barrier error"),
-    }
-    y = np.arange(len(group_order))[::-1].astype(float)
-    for metric, offset in (("profile_mae", 0.10), ("barrier_abs_error", -0.10)):
-        color, marker, metric_label = metric_styles[metric]
+    y = np.arange(len(group_order), dtype=float)[::-1]
+    for metric, offset, filled, label in (
+        ("profile_mae", 0.13, True, "Profile MAE"),
+        ("barrier_abs_error", -0.13, False, "Barrier error"),
+    ):
         indexed = subgroup_rows[subgroup_rows["metric"] == metric].set_index(
             ["dimension", "group"]
         )
@@ -412,93 +367,84 @@ def selective_robustness() -> None:
         estimate = 100 * rows["effect"].to_numpy(float)
         low = 100 * rows["ci_low"].to_numpy(float)
         high = 100 * rows["ci_high"].to_numpy(float)
-        subgroup_axis.errorbar(
+        _errorbar(
+            subgroup_axis,
             estimate,
             y + offset,
+            "zero_shot_active",
             xerr=np.vstack([estimate - low, high - estimate]),
-            fmt=marker,
-            markersize=4.2,
-            capsize=2.0,
-            linewidth=1.0,
-            color=color,
-            markerfacecolor=("white" if metric == "barrier_abs_error" else color),
-            label=metric_label,
+            filled=filled,
+            label=label,
         )
-    subgroup_axis.axvline(0, color=INK, linewidth=0.75)
-    subgroup_axis.axhline(2.5, color=LIGHT, linewidth=0.8)
-    subgroup_axis.set_yticks(
-        y, [f"{item[2]} (n={item[3]})" for item in group_order]
-    )
-    subgroup_axis.set_xlabel("Reduction vs zero-shot active (%)")
-    subgroup_axis.set_title(
-        "c  Accepted-regime subgroups",
-        loc="left",
-        fontweight="bold",
-        fontsize=9.0,
-    )
-    subgroup_axis.grid(axis="x", color=LIGHT, linewidth=0.55, alpha=0.75)
-    subgroup_axis.spines[["top", "right"]].set_visible(False)
-    subgroup_axis.legend(frameon=False, fontsize=7, loc="upper left")
+    subgroup_axis.axvline(0, color=INK, linewidth=0.6)
+    subgroup_axis.axhline(2.5, color=LIGHT, linewidth=0.6)
+    subgroup_axis.set_yticks(y, [f"{item[2]} (n = {item[3]})" for item in group_order])
+    subgroup_axis.set_ylim(-0.6, len(group_order) - 0.4)
+    subgroup_axis.tick_params(axis="y", length=0)
+    subgroup_axis.set_xlabel("Relative error reduction vs zero-shot active (%)")
+    subgroup_axis.set_title("Accepted-regime subgroups")
+    subgroup_axis.grid(axis="x")
+    subgroup_axis.legend(loc="lower left", fontsize=6.5)
 
     hybrid_axis = axes[1, 1]
-    line_styles = {
-        ("zero_shot_active", "profile_mae"): (BLUE, "-", "o"),
-        ("zero_shot_active", "barrier_abs_error"): (ORANGE, "-", "s"),
-        ("learned_equal", "profile_mae"): (BLUE, "--", "o"),
-        ("learned_equal", "barrier_abs_error"): (ORANGE, "--", "s"),
-    }
-    for comparator in ("zero_shot_active", "learned_equal"):
-        for metric in ("profile_mae", "barrier_abs_error"):
+    for comparator in COMPARATORS:
+        color = METHOD_COLORS[comparator]
+        for metric, linestyle, filled in (
+            ("profile_mae", "-", True),
+            ("barrier_abs_error", "--", False),
+        ):
             rows = hybrid_effects[
                 (hybrid_effects["comparator"] == comparator)
                 & (hybrid_effects["metric"] == metric)
             ].sort_values("budget")
-            color, linestyle, marker = line_styles[(comparator, metric)]
-            metric_label = "MAE" if metric == "profile_mae" else "Barrier"
-            control_label = "zero-shot" if comparator == "zero_shot_active" else "equal"
             hybrid_axis.plot(
                 rows["budget"],
                 100 * rows["effect"],
                 color=color,
                 linestyle=linestyle,
-                marker=marker,
-                markersize=3.7,
+                marker=METHOD_MARKERS[comparator],
+                markersize=3.8,
+                markerfacecolor=color if filled else "white",
+                markeredgecolor=color,
+                markeredgewidth=0.8,
                 linewidth=1.2,
-                markerfacecolor=("white" if comparator == "learned_equal" else color),
-                label=f"{metric_label} vs {control_label}",
             )
-    hybrid_axis.axhline(0, color=INK, linewidth=0.75)
+    hybrid_axis.axhline(0, color=INK, linewidth=0.6)
     hybrid_axis.set_xticks([1, 2, 4, 6])
-    hybrid_axis.set_xlabel("Revealed target energies")
-    hybrid_axis.set_ylabel("Hybrid relative error reduction (%)")
-    hybrid_axis.set_title(
-        "d  Zero-shot fallback",
-        loc="left",
-        fontweight="bold",
-        fontsize=9.0,
+    hybrid_axis.set_xlabel("DFT labels per profile")
+    hybrid_axis.set_ylabel("Relative error reduction (%)")
+    hybrid_axis.set_title("Distance-gated zero-shot fallback")
+    hybrid_axis.grid(color=LIGHT)
+    hybrid_axis.legend(
+        handles=[
+            Line2D(
+                [],
+                [],
+                color=MID,
+                linestyle="-",
+                marker="o",
+                markersize=3.8,
+                label="Profile MAE",
+            ),
+            Line2D(
+                [],
+                [],
+                color=MID,
+                linestyle="--",
+                marker="o",
+                markersize=3.8,
+                markerfacecolor="white",
+                label="Barrier error",
+            ),
+        ],
+        loc="upper left",
+        fontsize=6.5,
     )
-    hybrid_axis.grid(color=LIGHT, linewidth=0.55, alpha=0.75)
-    hybrid_axis.spines[["top", "right"]].set_visible(False)
-    hybrid_axis.legend(frameon=False, fontsize=6.7, loc="upper left")
 
-    handles, labels = axes[0, 1].get_legend_handles_labels()
-    fig.legend(
-        handles,
-        labels,
-        frameon=False,
-        ncol=2,
-        loc="upper center",
-        bbox_to_anchor=(0.5, 0.94),
-        fontsize=7.5,
-    )
-    fig.suptitle(
-        "Post-confirmatory selective robustness and operational fallback",
-        fontsize=10.5,
-        fontweight="bold",
-        y=0.995,
-    )
-    fig.tight_layout(rect=(0, 0, 1, 0.89), h_pad=2.2, w_pad=1.5)
-    _save(fig, "figS3_selective_robustness")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside upper center", ncol=2)
+    label_panels(fig, zip(axes.ravel(), "abcd", strict=True))
+    _save(fig, "figS5_selective_robustness")
 
 
 def _effect_cell(row: pd.Series) -> str:
@@ -595,7 +541,7 @@ def _applicability_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Post-confirmatory applicability effects across target-blind torsion-chemistry distance quartiles ($n=250$ profiles per quartile). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples). Positive values favor learned active acquisition. Quartiles were fixed from the confirmation coverage variable before stratified effects were computed. These are descriptive, unadjusted estimates; no null-hypothesis tests or $p$ values are reported.}",
+        r"\caption{Post-confirmatory applicability effects across target-blind torsion-chemistry distance quartiles ($n=250$ profiles per quartile). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples). Positive values favour learned active acquisition. Quartiles were fixed from the confirmation coverage variable before stratified effects were computed. These are descriptive, unadjusted estimates; no null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_applicability}",
         r"\footnotesize",
         r"\begin{tabular}{clrrrr}",
@@ -682,7 +628,7 @@ def _failure_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Profile-level wins, ties and losses for learned active acquisition at six reveals ($n=1{,}000$ confirmation profiles). Counts are descriptive; a win means smaller error for learned active acquisition, ties use the frozen numerical tolerance, and a joint regression means both primary endpoints were worse for the proposed policy. No inferential tests or $p$ values are reported.}",
+        r"\caption{Profile-level wins, ties and losses for learned active acquisition at six labels ($n=1{,}000$ confirmation profiles). Counts are descriptive; a win means smaller error for learned active acquisition, ties use the frozen numerical tolerance, and a joint regression means both primary endpoints were worse for the proposed policy. No inferential tests or $p$ values are reported.}",
         r"\label{tab:si_failures}",
         r"\begin{tabular}{llrrrr}",
         r"\toprule",
@@ -759,7 +705,7 @@ def _selective_effects_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{Registered E016C fresh-shard effects at six reveals ($n=1{,}000$ total; accepted $n=735$, rejected $n=265$). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples); positive values favor learned active acquisition. The accepted regime was defined by the frozen target-blind distance cutoff before shard-3 target-energy access. No null-hypothesis tests or $p$ values are reported.}",
+        r"\caption{Fresh-shard validation of the chemistry-distance gate at six labels ($n=1{,}000$ total; accepted $n=735$, rejected $n=265$). Values are paired relative error reductions in percent with 95\% profile-bootstrap intervals (5,000 resamples); positive values favour learned active acquisition. The accepted regime was defined by the frozen target-blind distance cutoff before shard-3 target-energy access. No null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_selective_effects}",
         r"\small",
         r"\begin{tabular}{lrlrr}",
@@ -795,7 +741,7 @@ def _selective_failures_table() -> str:
     lines = [
         r"\begin{table}[H]",
         r"\centering",
-        r"\caption{E016C joint two-endpoint regressions at six reveals. The Profiles column is $n$ for each stratum. A joint regression means learned active acquisition had both larger profile MAE and larger barrier absolute error than the named comparator. Entries are descriptive counts and proportions; the registered concentration gate applied only to the zero-shot active comparison. No null-hypothesis tests or $p$ values are reported.}",
+        r"\caption{Joint two-endpoint regressions on the fresh shard at six labels. The Profiles column is $n$ for each stratum. A joint regression means learned active acquisition had both larger profile MAE and larger barrier absolute error than the named comparator. Entries are descriptive counts and proportions; the pre-specified concentration gate applied only to the zero-shot active comparison. No null-hypothesis tests or $p$ values are reported.}",
         r"\label{tab:si_selective_failures}",
         r"\begin{tabular}{llrrr}",
         r"\toprule",
@@ -831,13 +777,63 @@ def latex_tables() -> None:
         _write_if_changed(PAPER_TABLES / filename, content)
 
 
+def error_distributions() -> None:
+    """Six-label error distributions for the proposed method and its ablations."""
+    ecdf = pd.read_csv(TABLES / "confirmation_error_ecdf.csv")
+    characteristics = pd.read_csv(TABLES / "confirmation_operating_characteristics.csv")
+    fig, axes = plt.subplots(1, 2, figsize=(SI_WIDTH, 2.6), layout="constrained")
+    for axis, metric, title in zip(
+        axes,
+        METRICS,
+        ("Profile MAE with six labels", "Barrier error with six labels"),
+        strict=True,
+    ):
+        ecdf_panel(axis, ecdf, characteristics, metric)
+        axis.set_title(title)
+    axes[0].set_ylabel("Profiles at or below error (%)")
+    axes[1].tick_params(axis="y", labelleft=False)
+    handles = [
+        Line2D(
+            [],
+            [],
+            color=METHOD_COLORS[method],
+            linewidth=1.5,
+            label=METHOD_LABELS[method],
+        )
+        for method in METHODS
+    ]
+    fig.legend(handles=handles, loc="outside upper center", ncol=3)
+    label_panels(fig, [(axes[0], "a"), (axes[1], "b")])
+    _save(fig, "figS1_error_distributions")
+
+
+def scaffold_sensitivity() -> None:
+    """Effects on development-seen and development-unseen scaffolds."""
+    data = pd.read_csv(TABLES / "confirmation_scaffold_effects.csv")
+    groups = [
+        ("unseen_development_scaffold", "Unseen scaffold\nn = 786"),
+        ("seen_development_scaffold", "Seen scaffold\nn = 187"),
+        ("acyclic", "Acyclic\nn = 27"),
+    ]
+    fig, axes = plt.subplots(
+        1, 2, figsize=(SI_WIDTH, 2.4), sharey=True, layout="constrained"
+    )
+    contrast_forest(axes, data, "scaffold_group", groups)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="outside upper center", ncol=2)
+    label_panels(fig, [(axes[0], "a"), (axes[1], "b")])
+    _save(fig, "figS2_scaffold_sensitivity")
+
+
 def main() -> None:
-    _style()
+    apply_style()
+    error_distributions()
+    scaffold_sensitivity()
     applicability_domain()
     failure_examples()
     selective_robustness()
     latex_tables()
-    print("Generated three supporting figures and seven source-backed LaTeX tables.")
+    print("Generated five supporting figures and seven source-backed LaTeX tables.")
 
 
 if __name__ == "__main__":
